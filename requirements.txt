@@ -5,3 +5,4 @@ pandas
 collections
 matplotlib
 urlextract
+seaborn
