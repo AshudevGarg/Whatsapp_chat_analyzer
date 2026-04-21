@@ -1,38 +1,79 @@
 import re
 import pandas as pd
+
 def preprocess(data):
 
-    pattern = '\d{1,2}/\d{1,2}/\d{2,4},\s\d{1,2}:\d{2}\s-\s'
-    messages = re.split(pattern, data)[1:]
-    dates = re.findall(pattern, data)
-    df = pd.DataFrame({'user_message': messages, 'message_date': dates})
-    df['message_date'] = pd.to_datetime(df['message_date'], format='%d/%m/%y, %H:%M - ')
-    df.rename(columns={'message_date': 'date'}, inplace=True)
+    #Fix weird unicode spaces
+    data = data.replace('\u202f', ' ').replace('\u00a0', ' ')
 
+    lines = data.split('\n')
+
+    dates = []
     users = []
     messages = []
 
-    pattern = r'^([^:]+):\s(.*)'
+    #UNIVERSAL PATTERN (handles both 24-hour & AM/PM)
+    pattern = r'^(\d{1,2}/\d{1,2}/\d{2,4},\s\d{1,2}:\d{2}(?:\s?[APMapm]{2})?)\s-\s'
 
-    for message in df['user_message']:
-        match = re.match(pattern, message)
+    current_message = ""
+    current_user = None
+    current_date = None
+
+    for line in lines:
+        match = re.match(pattern, line)
 
         if match:
-            users.append(match.group(1))  # username
-            messages.append(match.group(2))  # message
+            # Save previous message
+            if current_message:
+                dates.append(current_date)
+                users.append(current_user)
+                messages.append(current_message.strip())
+
+            date_part = match.group(1)
+            rest = line[len(match.group(0)):]
+
+            current_date = date_part
+
+            if ": " in rest:
+                current_user, current_message = rest.split(": ", 1)
+            else:
+                current_user = "group_notification"
+                current_message = rest
+
         else:
-            users.append('group_notification')
-            messages.append(message)
+            # Multiline message handling
+            current_message += " " + line
 
-    df['user'] = users
-    df['message'] = messages
-    df.drop(columns=['user_message'], inplace=True)
+    # Add last message
+    if current_message:
+        dates.append(current_date)
+        users.append(current_user)
+        messages.append(current_message.strip())
 
-    df['date'] = pd.to_datetime(df['date'])
+    # Create DataFrame
+    df = pd.DataFrame({
+        'date': dates,
+        'user': users,
+        'message': messages
+    })
 
+    #Smart datetime parsing (AUTO handles both formats)
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+
+    # Drop invalid rows
+    df.dropna(subset=['date'], inplace=True)
+
+    # FEATURES 
     df['year'] = df['date'].dt.year
     df['month'] = df['date'].dt.month_name()
     df['day'] = df['date'].dt.day
     df['day_name'] = df['date'].dt.day_name()
     df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute
+
+    # Optional: period (for heatmap)
+    df['period'] = df['hour'].apply(
+        lambda x: f"{x}-{x+1}" if x != 23 else "23-00"
+    )
+
     return df
