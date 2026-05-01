@@ -12,10 +12,10 @@ st.sidebar.title('📊 Whatsapp Chat Analyzer')
 uploaded_file = st.sidebar.file_uploader("Choose a file", type=["txt"])
 
 if uploaded_file is not None:
+
     try:
         bytes_data = uploaded_file.getvalue()
-        data = bytes_data.decode('utf-8')
-
+        data = uploaded_file.getvalue().decode("utf-8")
         df = preprocessor.preprocess(data)
 
         if df.empty:
@@ -239,6 +239,51 @@ if uploaded_file is not None:
             ax.set_title("Weekly Activity Heatmap")
 
             st.pyplot(fig)
+        st.markdown("---")
+
+        # EXTRACT PERSON CHAT
+        st.title("💬 Extract Chats")
+
+        if selected_user != "Overall":
+
+            st.subheader(f"Chats of {selected_user}")
+            # TXT DOWNLOAD
+            chat_text = ""
+
+            user_chat_df = df[df['user'] == selected_user]
+
+            for _, row in user_chat_df.iterrows():
+                chat_text += f"[{row['date']}] {row['user']}: {row['message']}\n"
+
+            st.download_button(
+                label=f"⬇️ Download {selected_user} Chat TXT",
+                data=chat_text,
+                file_name=f"{selected_user}_chat.txt",
+                mime="text/plain"
+            )
+
+            # CSV DOWNLOAD
+            csv = user_chat_df.to_csv(index=False).encode('utf-8')
+
+            st.download_button(
+                label=f"⬇️ Download {selected_user} Chat CSV",
+                data=csv,
+                file_name=f"{selected_user}_chat.csv",
+                mime="text/csv"
+            )
+
+            # Show chats
+            for _, row in df[df['user'] == selected_user].iterrows():
+                st.markdown(f"""
+                       **🕒 {row['date']}**  
+                       💬 {row['message']}
+                       """)
+
+                st.divider()
+
+
+
+
 
     except Exception as e:
         st.error(f"Something went wrong: {e}")
