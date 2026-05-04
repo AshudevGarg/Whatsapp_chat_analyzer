@@ -95,6 +95,8 @@ def preprocess(data):
     df['period'] = period
 
     # Remove omitted media lines
+    df['message'] = df['message'].fillna('').astype(str)
+
     df = df[~df['message'].str.contains('omitted', na=False)]
 
     return df
