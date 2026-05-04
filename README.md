@@ -1,7 +1,7 @@
 # 📊 WhatsApp Chat Analyzer
 
 🚀 **Live App:**  
-https://your-render-link.onrender.com
+[https://your-render-link.onrender.com](https://whatsapp-chat-analyzer-fgfz.onrender.com/)
 
 A powerful WhatsApp Chat Analyzer built using **Python**, **Streamlit**, **Pandas**, **Matplotlib**, and **Seaborn**.
 
